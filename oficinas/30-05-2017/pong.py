@@ -41,6 +41,31 @@ class Pong():
         if self.retangulo.right >= self.tamTela[0]:
             self.direcao[0] *= -1
 
+class Jogador():
+    def __init__(self, tamTela):
+        self.tamTela = tamTela
+        self.centerX = tamTela[0] - 59
+        self.centerY = int(tamTela[1] * 0.5)
+
+        self.tamX = 10
+        self.tamY = 25
+
+        self.retangulo = pygame.Rect(self.centerX - self.tamX,
+                                     self.centerY - self.tamY,
+                                     self.tamX*2, self.tamY*2)
+        self.direcao = 0
+        self.velocidade = 8
+    def desenhar(self, tela):
+        pygame.draw.rect(tela, BRANCO, self.retangulo, 0)
+    def update(self):
+        self.centerY += self.direcao * self.velocidade
+        self.retangulo.center = (self.centerX, self.centerY)
+
+        if self.retangulo.top <= 0:
+            self.retangulo.top = 0
+        if self.retangulo.bottom >= self.tamTela[1] - 1:
+            self.retangulo.bottom = self.tamTela[1] - 1
+
 
 # Definir cores padrões
 BRANCO = (255, 255, 255)
@@ -65,6 +90,9 @@ def main():
     # Criando o pong
     pong = Pong(tamanhoTela)
     pong.direcao = [1, 1]
+
+    # Barra do jogador
+    jogador = Jogador(tamanhoTela)
 
     # Precisamos tratar o jogo dentro de um loop que é executaro até
     # que mandemos ele parar. Para isso utilizaremos uma variável que
@@ -91,6 +119,13 @@ def main():
             # de fechar ( o X na tela ) definiremos o valor de rodando para False.
             if evento.type == pygame.QUIT:
                 rodando = False
+            if evento.type == KEYDOWN:
+                if evento.key == K_UP:
+                    jogador.direcao = -1
+                elif evento.key == K_DOWN:
+                    jogador.direcao = 1
+            if evento.type == KEYUP:
+                jogador.direcao = 0
 
         # Para cada vez que uma iteração for tratada o jogo precisa
         # apagar o que tinha anteriormente na janela. Para isso a
@@ -102,10 +137,12 @@ def main():
         # Aqui trataremos todas as modificações nos objetos do jogo.
         #  /* Insira código */
         pong.update()
+        jogador.update()
 
         # Agora pedimos para o pygame desenhar todos os objetos na tela.
         #  /* Insira código */
         pong.desenhar(tela)
+        jogador.desenhar(tela)
 
         # Apos processar todas as modificações e desenhar tudo na tela
         # agora mandamos o pygame mostrar a próxima tela.
