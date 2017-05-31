@@ -23,10 +23,17 @@ class Pong():
 
         self.direcao = [0, 0]
         self.velocidade = 3
+        self.contador = 0
+
+        self.bateuDireita = False
+        self.bateuEsquerda = False
 
     def desenhar(self, tela):
         pygame.draw.rect(tela, BRANCO, self.retangulo, 0)
-    def update(self):
+    def update(self, jogador, computador):
+        self.velocidade += self.contador/5
+        if self.contador == 5:
+            self.contador = 0
         self.centroX += self.direcao[0] * self.velocidade
         self.centroY += self.direcao[1] * self.velocidade
 
@@ -38,8 +45,17 @@ class Pong():
             self.direcao[1] *= -1
         if self.retangulo.left <= 0:
             self.direcao[0] *= -1
+            self.bateuEsquerda = True
         if self.retangulo.right >= self.tamTela[0]:
             self.direcao[0] *= -1
+            self.bateuDireita = True
+
+        if self.retangulo.colliderect(jogador.retangulo):
+            self.direcao[0] = -1
+            self.contador += 1
+        if self.retangulo.colliderect(computador.retangulo):
+            self.direcao[0] = 1
+            self.contador += 1
 
 class Jogador():
     def __init__(self, tamTela):
@@ -47,24 +63,55 @@ class Jogador():
         self.centerX = tamTela[0] - 59
         self.centerY = int(tamTela[1] * 0.5)
 
-        self.tamX = 10
-        self.tamY = 25
+        self.tamX = 5
+        self.tamY = 30
 
         self.retangulo = pygame.Rect(self.centerX - self.tamX,
                                      self.centerY - self.tamY,
                                      self.tamX*2, self.tamY*2)
         self.direcao = 0
-        self.velocidade = 8
+        self.velocidade = 6
     def desenhar(self, tela):
         pygame.draw.rect(tela, BRANCO, self.retangulo, 0)
     def update(self):
         self.centerY += self.direcao * self.velocidade
+
+        if (self.centerY - self.tamY) <= 0:
+            self.centerY = self.tamY
+        if (self.centerY + self.tamY) >= self.tamTela[1] - 1:
+            self.centerY = self.tamTela[1] - 1 - self.tamY
+
         self.retangulo.center = (self.centerX, self.centerY)
 
         if self.retangulo.top <= 0:
             self.retangulo.top = 0
         if self.retangulo.bottom >= self.tamTela[1] - 1:
             self.retangulo.bottom = self.tamTela[1] - 1
+
+class Computador():
+    def __init__(self, tamTela):
+        self.tamTela = tamTela
+        self.centerX = 59
+        self.centerY = int(tamTela[1] * 0.5)
+
+        self.tamX = 5
+        self.tamY = 30
+
+        self.retangulo = pygame.Rect(self.centerX - self.tamX,
+                                     self.centerY - self.tamY,
+                                     self.tamX*2, self.tamY*2)
+        self.velocidade = 8
+    def desenhar(self, tela):
+        pygame.draw.rect(tela, (255,0,255), self.retangulo, 0)
+    def update(self, bola):
+        self.velocidade = randint(3, 4)
+        if bola.direcao[0] == -1:
+            if self.retangulo.top > bola.retangulo.top:
+                self.centerY -= self.velocidade
+            if self.retangulo.bottom < bola.retangulo.bottom:
+                self.centerY += self.velocidade
+
+        self.retangulo.center = (self.centerX, self.centerY)
 
 
 # Definir cores padrões
@@ -93,6 +140,15 @@ def main():
 
     # Barra do jogador
     jogador = Jogador(tamanhoTela)
+
+    # Barra do computador
+    computador = Computador(tamanhoTela)
+
+    fonte = pygame.font.SysFont("monospace", 50)
+    ganhou = fonte.render("You Win", 0, BRANCO)
+    perdeu = fonte.render("Game Over", 0, BRANCO)
+    retGanhou = ganhou.get_rect(center=(int(tamanhoTela[0]*0.5), int(tamanhoTela[1]*0.5)))
+    retPerdeu = ganhou.get_rect(center=(int(tamanhoTela[0]*0.5), int(tamanhoTela[1]*0.5)))
 
     # Precisamos tratar o jogo dentro de um loop que é executaro até
     # que mandemos ele parar. Para isso utilizaremos uma variável que
@@ -125,7 +181,10 @@ def main():
                 elif evento.key == K_DOWN:
                     jogador.direcao = 1
             if evento.type == KEYUP:
-                jogador.direcao = 0
+                if evento.key == K_UP and jogador.direcao == -1:
+                    jogador.direcao = 0
+                elif evento.key == K_DOWN and jogador.direcao == 1:
+                    jogador.direcao = 0
 
         # Para cada vez que uma iteração for tratada o jogo precisa
         # apagar o que tinha anteriormente na janela. Para isso a
@@ -136,13 +195,21 @@ def main():
 
         # Aqui trataremos todas as modificações nos objetos do jogo.
         #  /* Insira código */
-        pong.update()
-        jogador.update()
+        if pong.bateuDireita:
+            tela.blit(perdeu, retPerdeu)
+        elif pong.bateuEsquerda:
+            tela.blit(ganhou, retGanhou)
+        else:
+            pong.update(jogador, computador)
+            jogador.update()
+            computador.update(pong)
+
 
         # Agora pedimos para o pygame desenhar todos os objetos na tela.
         #  /* Insira código */
         pong.desenhar(tela)
         jogador.desenhar(tela)
+        computador.desenhar(tela)
 
         # Apos processar todas as modificações e desenhar tudo na tela
         # agora mandamos o pygame mostrar a próxima tela.
